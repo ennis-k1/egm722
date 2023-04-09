@@ -1,3 +1,7 @@
+import operator
+import os
+from operator import attrgetter
+
 import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -6,7 +10,9 @@ from cartopy.feature import ShapelyFeature
 import cartopy.crs as ccrs
 import matplotlib.patches as mpatches
 
-
+class wardObject:
+    def __init__(self, Ward ):
+        self.Ward = Ward
 # generate matplotlib handles to create a legend of the features we put in our map.
 def generate_handles(labels, colors, edge='k', alpha=1):
     lc = len(colors)  # get the length of the color list
@@ -23,15 +29,43 @@ plt.ion()
 # try to print the results to the screen using the format method demonstrated in the workbook
 
 # load the necessary data here and transform to a UTM projection
-wards = gpd.read_file('../workbooks/Week3/data_files/NI_Wards.shp').to_crs(epsg=32629)
-counties = gpd.read_file('../workbooks/Week3/data_files/Counties.shp').to_crs(epsg=32629)
-# your analysis goes here...
+# wards = gpd.read_file('../Week3/data_files/NI_Wards.shp').to_crs(epsg=32629)
+outline = gpd.read_file('../Week2/data_files/NI_outline.shp').to_crs(epsg=2157)
+
+wards = gpd.read_file('../Week3/data_files/NI_Wards.shp').to_crs(epsg=2157)
+
+counties = gpd.read_file('../Week3/data_files/Counties.shp').to_crs(epsg=2157)
+countiesDf = pd.DataFrame(counties)
+# pd.set_option('display.max_columns', None)
+print(countiesDf.head())
 
 join = gpd.sjoin(wards, counties, how='inner', lsuffix='left', rsuffix='right')
+df = pd.DataFrame(join) # CREATE A DATAFRAME OF THE JOIN
 
-summary = clipped_gdf.groupby(['CountyName'])['Population'].sum()
+print("Counties & Wards have matching CRS : ", counties.crs == wards.crs) # test if the crs is the same for roads_itm and counties.
 
+summary = join.groupby(['CountyName'])['Population'].sum()
+print("Counties Summary")
 print(summary)
+print('Number of features in wards: {}'.format(len(wards.index)))
+print('Number of features in join: {}'.format(len(join.index)))
+
+clipped = [] # initialize an empty list
+for county in counties['CountyName'].unique():
+    tmp_clip = gpd.clip(wards, counties[counties['CountyName'] == county]) # clip the roads by county border
+    for ind, row in tmp_clip.iterrows():
+        #tmp_clip.loc[ind, 'Length'] = row['geometry'].length # we have to update the length for any clipped roads
+        tmp_clip.loc[ind, 'CountyName'] = county # set the county name for each road feature
+    clipped.append(tmp_clip) # add the clipped GeoDataFrame to the
+
+# pandas has a function, concat, which will combine (concatenate) a list of DataFrames (or GeoDataFrames)
+# we can then create a GeoDataFrame from the combined DataFrame, as the combined DataFrame will have a geometry column.
+clipped_gdf = gpd.GeoDataFrame(pd.concat(clipped))
+clip_total = clipped_gdf['Length'].sum()
+
+print("CLIPPED GDF - ", clipped_gdf)
+print('Number of features in wards: {}'.format(len(wards.index)))
+print('Number of features in join: {}'.format(len(join.index)))
 
 # ---------------------------------------------------------------------------------------------------------------------
 # below here, you may need to modify the script somewhat to create your map.
@@ -62,6 +96,15 @@ county_handles = generate_handles([''], ['none'], edge='r')
 
 ax.legend(county_handles, ['County Boundaries'], fontsize=12, loc='upper left', framealpha=1)
 
+
+
+print("The Ward With the Highest Population : ")
+print(df[df.Population == df.Population.max()])
+
+print("The Ward With the Lowest Population : ")
+print(df[df.Population == df.Population.min()])
+
+
 # save the figure
-# fig.savefig('sample_map.png', dpi=300, bbox_inches='tight')
+fig.savefig('sample_map.png', dpi=300, bbox_inches='tight')
 
