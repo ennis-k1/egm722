@@ -1,12 +1,13 @@
 import os
-import geopandas as gpd
 import matplotlib.pyplot as plt
+import geopandas as gpd
+
 from cartopy.feature import ShapelyFeature
 import cartopy.crs as ccrs
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 
-
+plt.ion()  # make the plotting interactive
 # generate matplotlib handles to create a legend of the features we put in our map.
 def generate_handles(labels, colors, edge='k', alpha=1):
     lc = len(colors)  # get the length of the color list
@@ -41,7 +42,7 @@ towns = gpd.read_file(os.path.abspath('data_files/Towns.shp'))
 water = gpd.read_file(os.path.abspath('data_files/Water.shp'))
 rivers = gpd.read_file(os.path.abspath('data_files/Rivers.shp'))
 counties = gpd.read_file(os.path.abspath('data_files/Counties.shp'))
-
+water.head(10)
 # create a figure of size 10x10 (representing the page size in inches)
 myFig = plt.figure(figsize=(10, 10))
 
@@ -98,7 +99,11 @@ river_feat = ShapelyFeature(rivers['geometry'],  # first argument is the geometr
 ax.add_feature(river_feat)  # add the collection of features to the map
 
 # ShapelyFeature creates a polygon, so for point data we can just use ax.plot()
-town_handle = ax.plot(towns.geometry.x, towns.geometry.y, 's', color='0.5', ms=6, transform=myCRS)
+filteredTowns = towns.loc[towns['STATUS'] == 'Town']
+town_handle = ax.plot(filteredTowns.geometry.x, filteredTowns.geometry.y, 's', color='red', ms=6, transform=myCRS)
+
+cities = towns.loc[towns['STATUS'] == 'City']
+city_handle = ax.plot(cities.geometry.x, cities.geometry.y, 's', color='royalblue', ms=6, transform=myCRS)
 
 # generate a list of handles for the county datasets
 county_handles = generate_handles(counties.CountyName.unique(), county_colors, alpha=0.25)
@@ -113,8 +118,8 @@ river_handle = [mlines.Line2D([], [], color='royalblue')]  # have to make this a
 nice_names = [name.title() for name in county_names]
 
 # ax.legend() takes a list of handles and a list of labels corresponding to the objects you want to add to the legend
-handles = county_handles + water_handle + river_handle + town_handle
-labels = nice_names + ['Lakes', 'Rivers', 'Towns']
+handles = county_handles + water_handle + river_handle + city_handle + town_handle
+labels = nice_names + ['Lakes', 'Rivers', 'City', 'Town']
 
 leg = ax.legend(handles, labels, title='Legend', title_fontsize=12,
                 fontsize=10, loc='upper left', frameon=True, framealpha=1)
@@ -134,4 +139,4 @@ for ind, row in towns.iterrows():  # towns.iterrows() returns the index and row
 scale_bar(ax)
 
 # save the figure as map.png, cropped to the axis (bbox_inches='tight'), and a dpi of 300
-myFig.savefig('map.png', bbox_inches='tight', dpi=300)
+myFig.savefig('map2.png', bbox_inches='tight', dpi=300)

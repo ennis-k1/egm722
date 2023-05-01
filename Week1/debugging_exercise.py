@@ -1,5 +1,5 @@
 import random
-
+# email updated
 # pick a random number for the user to guess
 rand = random.randint(1, 20)
 
@@ -10,6 +10,7 @@ while guess != rand:  # if the guess is not equal to the random number, you have
     if guess < rand:  # if the guess is too high, tell the user.
         count += count
         print('Too low. Guess again.')
+        count += count
     else:  # if the guess is too low, tell the user.
         print('Too high. Guess again.')
         count += count
